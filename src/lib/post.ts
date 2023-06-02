@@ -1,51 +1,83 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
-import { remark } from "remark";
-import html from "remark-html";
+import { compileMDX } from "next-mdx-remote/rsc";
 
-const postDirectory = path.join(process.cwd(), "src/posts");
+type Filetree = {
+  tree: [
+    {
+      path: string;
+    }
+  ];
+};
 
-export function getSortedPostsData() {
-  const fileNames = fs.readdirSync(postDirectory);
-  const allPostsData = fileNames.map((fileName) => {
-    const id = fileName.replace(/\.md$/, "");
+export async function getPostsByName(
+  fileName: string
+): Promise<BlogPost | undefined> {
+  console.log("getPostsByName");
 
-    const fullPath = path.join(postDirectory, fileName);
-    const fileContents = fs.readFileSync(fullPath, "utf8");
+  const res = await fetch(
+    `https://raw.githubusercontent.com/lake05/blogposts/main/${fileName}`
+  );
 
-    // use gray-matter to parse the post metadata section
-    const matterResult = matter(fileContents);
+  if (!res.ok) return undefined;
 
-    const blogPost: Post = {
-      id,
-      title: matterResult.data.title,
-      date: matterResult.data.date,
-    };
+  const rawMDX = await res.text();
 
-    return blogPost;
+  if (rawMDX === "404: Not Found") return undefined;
+
+  const { content, frontmatter } = await compileMDX<{
+    title: string;
+    date: string;
+    tags: string[];
+  }>({
+    source: rawMDX,
+    options: {
+      parseFrontmatter: true,
+    },
   });
 
-  return allPostsData.sort((a, b) => (a.date < b.date ? 1 : -1));
-}
-
-export async function getPostDate(id: string) {
-  const fullPath = path.join(postDirectory, `${id}.md`);
-
-  const fileContents = fs.readFileSync(fullPath, "utf8");
-
-  const matterResult = matter(fileContents);
-
-  const processContent = await remark().use(html).process(matterResult.content);
-
-  const contentHtml = processContent.toString();
-
-  const blogPostWithHtml: Post & { contentHtml: string } = {
-    id,
-    title: matterResult.data.title,
-    date: matterResult.data.date,
-    contentHtml,
+  const id = fileName.replace(/\.mdx$/, "");
+  const blogPost: BlogPost = {
+    meta: {
+      id,
+      title: frontmatter.title,
+      date: frontmatter.date,
+      tags: frontmatter.tags,
+    },
+    content,
   };
 
-  return blogPostWithHtml;
+  return blogPost;
+}
+
+export async function getPostsMeta(): Promise<Meta[] | undefined> {
+  const res = await fetch(
+    "https://api.github.com/repos/lake05/blogposts/git/trees/main?recursive=1",
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    }
+  );
+
+  if (!res.ok) return undefined;
+
+  const repoFiletree: Filetree = await res.json();
+  const filesArray = repoFiletree.tree
+    .map((obj) => obj.path)
+    .filter((path) => path.endsWith(".mdx"));
+
+  const posts: Meta[] = [];
+
+  for (const file of filesArray) {
+    // 在 forEach 中使用 async/await 时，异步操作并不会等待前一个操作结束再执行下一个，而是会同时执行多个异步操作
+    const post = await getPostsByName(file);
+
+    if (post) {
+      const { meta } = post;
+      posts.push(meta);
+    }
+  }
+
+  return posts;
 }
