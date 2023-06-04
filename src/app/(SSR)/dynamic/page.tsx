@@ -32,9 +32,7 @@ export default async function Page() {
         className="rounded shadow"
       />
       by
-      <Link href={"static/user/" + image.user.username}>
-        {image.user.username}
-      </Link>
+      <Link href={"/user/" + image.user.username}>{image.user.username}</Link>
     </div>
   );
 }
