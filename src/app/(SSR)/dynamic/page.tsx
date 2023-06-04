@@ -1,12 +1,12 @@
 import Image from "next/image";
-import { UnsplashImage } from "@/models/unsplash-image";
+import { UnsplashImage } from "@/models/unsplash";
 import Link from "next/link";
 
 export const revalidate = 0;
 
 export default async function Page() {
   const response = await fetch(
-    `https://api.unsplash.com/photos/random?client_id=${process.env.UNSPLAHSH_API_KEY}`,
+    `https://api.unsplash.com/photos/random?client_id=${process.env.UNSPLAHSH_ACCESS_KEY}`,
     {
       // cache: "no-cache",
       // next: { revalidate: 0 },
@@ -29,7 +29,7 @@ export default async function Page() {
         alt={image.alt_description}
         width={width}
         height={height}
-        className="rounded shadow min-w-full h-auto"
+        className="rounded shadow"
       />
       by
       <Link href={"static/user/" + image.user.username}>

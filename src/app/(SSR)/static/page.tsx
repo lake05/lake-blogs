@@ -1,13 +1,13 @@
 import Image from "next/image";
-import { UnsplashImage } from "@/models/unsplash-image";
-import Link from "next/link";
+import { UnsplashImage } from "@/models/unsplash";
+import { notFound } from "next/navigation";
 
 export default async function Page() {
   const response = await fetch(
-    `https://api.unsplash.com/photos/random?client_id=${process.env.UNSPLAHSH_API_KEY}`
+    `https://api.unsplash.com/photos/random?client_id=${process.env.UNSPLAHSH_ACCESS_KEY}`
   );
 
-  if (!response.ok) return <div>Not found !</div>;
+  if (!response.ok) notFound();
 
   const image: UnsplashImage = await response.json();
 
@@ -21,12 +21,12 @@ export default async function Page() {
         alt={image.alt_description}
         width={width}
         height={height}
-        className="rounded shadow min-w-full h-auto"
+        className="rounded shadow"
       />
       by
-      <Link href={"static/user/" + image.user.username}>
+      <a target="_blank" href={"/users/" + image.user.username}>
         {image.user.username}
-      </Link>
+      </a>
     </div>
   );
 }

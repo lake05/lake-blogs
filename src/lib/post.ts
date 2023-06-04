@@ -1,6 +1,6 @@
 import { compileMDX } from "next-mdx-remote/rsc";
 
-type Filetree = {
+type FilterTree = {
   tree: [
     {
       path: string;
@@ -62,8 +62,8 @@ export async function getPostsMeta(): Promise<Meta[] | undefined> {
 
   if (!res.ok) return undefined;
 
-  const repoFiletree: Filetree = await res.json();
-  const filesArray = repoFiletree.tree
+  const repoFilerTree: FilterTree = await res.json();
+  const filesArray = repoFilerTree.tree
     .map((obj) => obj.path)
     .filter((path) => path.endsWith(".mdx"));
 
